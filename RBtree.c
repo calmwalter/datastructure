@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 struct NODE
 {
     int color;
@@ -17,7 +16,6 @@ struct RBTREE
 
 void BUILD_TREE(struct RBTREE *T)
 {
-
     T->NIL = (struct NODE *)malloc(sizeof(struct NODE));
     T->NIL->color = 1;
     T->NIL->left = NULL;
@@ -29,7 +27,6 @@ void BUILD_TREE(struct RBTREE *T)
 //左旋
 void LEFT_ROTATE(struct RBTREE *T, struct NODE *x)
 {
-
     struct NODE *y = x->right;
     //第一层关系x与z
     //先把y的左边节点给x的右边节点
@@ -111,14 +108,14 @@ void RB_INSERT_FIXUP(struct RBTREE *T, struct NODE *z)
                 z = z->p->p;
             }
             //如果父节点的父节点的右孩子是黑色的，那么判断z是其父节点的右孩子还是左孩子，若是右孩子
-            else if (z == z->p->right)
-            {
-                //进行左旋，(情况3)
-                z = z->p;
-                LEFT_ROTATE(T, z);
-            }
             else
             {
+                if (z == z->p->right)
+                {
+                    //进行左旋，(情况3)
+                    z = z->p;
+                    LEFT_ROTATE(T, z);
+                }
                 //如果是左孩子，先把z的父节点变成黑色，再把z的父节点的父节点变成红色，再进行右旋，情况3
                 z->p->color = 1;
                 z->p->p->color = 0;
@@ -134,15 +131,20 @@ void RB_INSERT_FIXUP(struct RBTREE *T, struct NODE *z)
                 z->p->color = 1;
                 z->p->p->color = 0;
                 y->color = 1;
+                z=z->p->p;
             }
-            else if (z == z->p->left)
+            else
             {
-                z = z->p;
-                RIGHT_ROTATE(T, z);
+                if (z == z->p->left)
+                {
+                    z = z->p;
+                    RIGHT_ROTATE(T, z);
+                }
+
+                z->p->color = 1;
+                z->p->p->color = 0;
+                LEFT_ROTATE(T, z->p->p);
             }
-            z->p->color = 1;
-            z->p->p->color = 0;
-            LEFT_ROTATE(T, z->p->p);
         }
     }
     T->root->color = 1;
@@ -186,26 +188,36 @@ void RB_INSERT(struct RBTREE *T, struct NODE *z)
     z->color = 0; //0代表红色
     RB_INSERT_FIXUP(T, z);
 }
+
 void TREE_WALK(struct RBTREE *T, struct NODE *node)
 {
+
     if (node == T->NIL)
     {
         return;
+    }
+    if(node->color==0 &&(node->left==0 || node->right==0)){
+        printf("error\n");
     }
     TREE_WALK(T, node->left);
     printf("%d ", node->key);
     TREE_WALK(T, node->right);
 }
+
+void RB_DELETE(struct RBTREE *T, struct NODE *node)
+{
+}
+
 int main(int argc, char const *argv[])
 {
     struct RBTREE T;
     BUILD_TREE(&T);
     srand((unsigned int)time(NULL));
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 100; i++)
     {
         struct NODE *n = (struct NODE *)malloc(sizeof(struct NODE));
         n->color = 0;
-        n->key = rand() % 100 + 1;
+        n->key = rand() % 1000 + 1;
         n->left = T.NIL;
         n->right = T.NIL;
         n->p = T.NIL;
