@@ -24,6 +24,16 @@ void BUILD_TREE(struct RBTREE *T)
     T->NIL->key = -1;
     T->root = T->NIL;
 }
+struct NDOE *TREE_MINIMUM(struct RBTREE *T, struct NODE *x)
+{
+    struct NODE *y = T->NIL;
+    while (x != T->NIL)
+    {
+        y = x;
+        x = x->left;
+    }
+    return y;
+}
 //左旋
 void LEFT_ROTATE(struct RBTREE *T, struct NODE *x)
 {
@@ -131,7 +141,7 @@ void RB_INSERT_FIXUP(struct RBTREE *T, struct NODE *z)
                 z->p->color = 1;
                 z->p->p->color = 0;
                 y->color = 1;
-                z=z->p->p;
+                z = z->p->p;
             }
             else
             {
@@ -196,16 +206,141 @@ void TREE_WALK(struct RBTREE *T, struct NODE *node)
     {
         return;
     }
-    if(node->color==0 &&(node->left==0 || node->right==0)){
+    if (node->color == 0 && (node->left == 0 || node->right == 0))
+    {
         printf("error\n");
     }
     TREE_WALK(T, node->left);
     printf("%d ", node->key);
     TREE_WALK(T, node->right);
 }
-
-void RB_DELETE(struct RBTREE *T, struct NODE *node)
+//用v子树代替u子树
+void RB_TRANSPLANT(struct RBTREE *T, struct NODE *u, struct NODE *v)
 {
+    if (u->p == T->NIL)
+    {
+        T->root = v;
+    }
+    else
+    {
+        if (u == u->p->left)
+        {
+            u->p->left = v;
+        }
+        else
+        {
+            u->p->right = v;
+        }
+    }
+}
+void RB_DELETE_FIXUP(struct RBTREE *T, struct NODE *x)
+{
+    while (x != T->root && x->color == 1)
+    {
+        if (x == x->p->left)
+        {
+            struct NODE *w = x->p->left;
+            if (w->color == 0)
+            {
+                w->color = 1;
+                w->p->color = 0;
+                LEFT_ROTATE(T, x->p);
+                w = x->p->right;
+            }
+            if (w->left->color == 1 && w->right->color == 1)
+            {
+                w->color = 0;
+                x = x->p;
+            }
+            else
+            {
+                if (w->right->color == 1)
+                {
+                    w->left->color = 1;
+                    w->color = 0;
+                    RIGHT_ROTATE(T, w);
+                    w = x->p->right;
+                }
+                w->color = x->p->color;
+                x->p->color = 1;
+                w->right->color = 1;
+                LEFT_ROTATE(T, x->p);
+                x = T->root;
+            }
+        }
+        else
+        {
+            struct NODE *w = x->p->right;
+            if (w->color == 0)
+            {
+                w->color = 1;
+                w->p->color = 0;
+                RIGHT_ROTATE(T, x->p);
+                w = x->p->left;
+            }
+            if (w->right->color == 1 && w->left->color == 1)
+            {
+                w->color = 0;
+                x = x->p;
+            }
+            else
+            {
+                if (w->left->color == 1)
+                {
+                    w->right->color = 1;
+                    w->color = 0;
+                    RIGHT_ROTATE(T, w);
+                    w = x->p->left;
+                }
+                w->color = x->p->color;
+                x->p->color = 1;
+                w->left->color = 1;
+                LEFT_ROTATE(T, x->p);
+                x = T->root;
+            }
+        }
+    }
+    x->color = 1;
+}
+void RB_DELETE(struct RBTREE *T, struct NODE *z)
+{
+    struct NODE *y = z;
+    struct NODE *x;
+    int y_original_color = y->color;
+    if (z->left == T->NIL)
+    {
+        x = z->right;
+        RB_TRANSPLANT(T, z, z->right);
+    }
+    else if (z->right == T->NIL)
+    {
+        x = z->left;
+        RB_TRANSPLANT(T, z, z->left);
+    }
+    else
+    {
+        y = TREE_MINIMUM(T, z->right);
+        y_original_color = y->color;
+        x = y->right;
+        if (y->p == z)
+        {
+            x->p = y;
+        }
+        else
+        {
+            RB_TRANSPLANT(T, y, y->right);
+            y->right = z->right;
+            y->right->p = y;
+        }
+        RB_TRANSPLANT(T, z, y);
+        y->left = z->left;
+        y->left->p = y;
+        y->color = z->color;
+    }
+    if (y_original_color == 1)
+    {
+        RB_DELETE_FIXUP(T, x);
+    }
 }
 
 int main(int argc, char const *argv[])
@@ -213,16 +348,27 @@ int main(int argc, char const *argv[])
     struct RBTREE T;
     BUILD_TREE(&T);
     srand((unsigned int)time(NULL));
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 10; i++)
     {
         struct NODE *n = (struct NODE *)malloc(sizeof(struct NODE));
         n->color = 0;
-        n->key = rand() % 1000 + 1;
+        n->key = rand() % 100 + 1;
         n->left = T.NIL;
         n->right = T.NIL;
         n->p = T.NIL;
         RB_INSERT(&T, n);
     }
+    
+    struct NODE *n = (struct NODE *)malloc(sizeof(struct NODE));
+    n->color = 0;
+    n->key = 1234567;
+    n->left = T.NIL;
+    n->right = T.NIL;
+    n->p = T.NIL;
+    RB_INSERT(&T, n);
+    TREE_WALK(&T, T.root);
+    printf("\n");
+    RB_DELETE(&T,n);
     TREE_WALK(&T, T.root);
     return 0;
 }
