@@ -157,6 +157,7 @@ void RB_INSERT_FIXUP(struct RBTREE *T, struct NODE *z)
             }
         }
     }
+    //调整最后的根节点颜色
     T->root->color = 1;
 }
 
@@ -217,36 +218,49 @@ void TREE_WALK(struct RBTREE *T, struct NODE *node)
 //用v子树代替u子树
 void RB_TRANSPLANT(struct RBTREE *T, struct NODE *u, struct NODE *v)
 {
+    //如果u是根节点，直接让根节点指向v
     if (u->p == T->NIL)
     {
         T->root = v;
     }
     else
     {
+        //如果u是其父节点的左子节点，则将v赋值给他
         if (u == u->p->left)
         {
             u->p->left = v;
         }
+        //否则
         else
         {
             u->p->right = v;
         }
     }
 }
+//删除节点后的修复
 void RB_DELETE_FIXUP(struct RBTREE *T, struct NODE *x)
 {
+    //当x指向的不是根节点并且x的颜色为黑色
     while (x != T->root && x->color == 1)
     {
+        //如果x是x的父节点的左子节点
         if (x == x->p->left)
         {
+            //定义w指向x
             struct NODE *w = x->p->left;
+            //若w的颜色为红色
             if (w->color == 0)
             {
+                //先将w的颜色变为黑色
                 w->color = 1;
+                //再将x的父节点的颜色变为红色，此时性质未改变
                 w->p->color = 0;
+                //进行左旋
                 LEFT_ROTATE(T, x->p);
+                //让w指向x的父节点的右边节点
                 w = x->p->right;
             }
+            //如果w的左边节点的颜色为黑色并且w的右边节点的颜色也为黑色
             if (w->left->color == 1 && w->right->color == 1)
             {
                 w->color = 0;
@@ -304,39 +318,61 @@ void RB_DELETE_FIXUP(struct RBTREE *T, struct NODE *x)
 }
 void RB_DELETE(struct RBTREE *T, struct NODE *z)
 {
+    //y指向需要被删除的节点或者用来代替这点删除点的节点
     struct NODE *y = z;
+    //x记录可能会被破坏的分支
     struct NODE *x;
+    //y原先指向的颜色
     int y_original_color = y->color;
+    //若删除点的左子节点为空
     if (z->left == T->NIL)
     {
+        //记录x为z的右子树
         x = z->right;
+        //用z的右子树直接替换z
         RB_TRANSPLANT(T, z, z->right);
     }
+    //若z的右子树为空
     else if (z->right == T->NIL)
     {
+        //记录z的左子树
         x = z->left;
+        //用z的左子树直接替换z
         RB_TRANSPLANT(T, z, z->left);
     }
+    //若z的子节点都不为空
     else
     {
+        //让y指向z的后继
         y = TREE_MINIMUM(T, z->right);
+        //更新y的原先颜色为新的节点颜色
         y_original_color = y->color;
+        //用x记录y的右子树
         x = y->right;
+        //如果y的父节点就是z
         if (y->p == z)
         {
+            //让x的父节点指向y（这里有疑问我不太懂有什么用，感觉毫无用处）
             x->p = y;
         }
+        //如果y的父节点不是z
         else
         {
+            //用y的右子树代替y
             RB_TRANSPLANT(T, y, y->right);
+            //将y插入到z的位置上，并进行关联
             y->right = z->right;
             y->right->p = y;
         }
+        //用y子树代替z子树
         RB_TRANSPLANT(T, z, y);
+        //并将z原先的左子树关联到y上
         y->left = z->left;
         y->left->p = y;
+        //将z的颜色给y
         y->color = z->color;
     }
+    //如果原先的y的颜色为黑色，则性质被破坏，调用修复函数修复函数的性质
     if (y_original_color == 1)
     {
         RB_DELETE_FIXUP(T, x);
@@ -358,17 +394,17 @@ int main(int argc, char const *argv[])
         n->p = T.NIL;
         RB_INSERT(&T, n);
     }
-    
+
     struct NODE *n = (struct NODE *)malloc(sizeof(struct NODE));
     n->color = 0;
-    n->key = 1234567;
+    n->key = 72;
     n->left = T.NIL;
     n->right = T.NIL;
     n->p = T.NIL;
     RB_INSERT(&T, n);
     TREE_WALK(&T, T.root);
     printf("\n");
-    RB_DELETE(&T,n);
+    RB_DELETE(&T, n);
     TREE_WALK(&T, T.root);
     return 0;
 }
