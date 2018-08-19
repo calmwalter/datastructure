@@ -263,22 +263,36 @@ void RB_DELETE_FIXUP(struct RBTREE *T, struct NODE *x)
             //如果w的左边节点的颜色为黑色并且w的右边节点的颜色也为黑色
             if (w->left->color == 1 && w->right->color == 1)
             {
+                //将w节点变成红色
                 w->color = 0;
+                //x指向他的父节点
                 x = x->p;
             }
             else
             {
+                //情况3------------->将其转换为情况四
+                //如果w的右节点是黑色的
                 if (w->right->color == 1)
                 {
+                    //w的左边的颜色变为黑色
                     w->left->color = 1;
+                    //w的颜色变为红色
                     w->color = 0;
+                    //进行右旋（不改变节点的性质）
                     RIGHT_ROTATE(T, w);
+                    //将w重新指向x的父节点的右子节点
                     w = x->p->right;
                 }
+                //情况四
+                //w的颜色变为x的父节点的颜色
                 w->color = x->p->color;
+                //x的父节点的颜色变为黑色
                 x->p->color = 1;
+                //w的右节点的颜色变为黑色
                 w->right->color = 1;
+                //进行左旋
                 LEFT_ROTATE(T, x->p);
+                //x指向根节点
                 x = T->root;
             }
         }
@@ -314,6 +328,7 @@ void RB_DELETE_FIXUP(struct RBTREE *T, struct NODE *x)
             }
         }
     }
+    //将x指向的节点的颜色变为黑色
     x->color = 1;
 }
 void RB_DELETE(struct RBTREE *T, struct NODE *z)
