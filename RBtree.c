@@ -1,425 +1,387 @@
 #include <stdio.h>
 #include <stdlib.h>
-struct NODE
+#include <time.h>
+typedef struct NODE
 {
-    int color;
-    int key; //0代表红色，1代表黑色
     struct NODE *left;
     struct NODE *right;
     struct NODE *p;
-};
-struct RBTREE
-{
-    struct NODE *root;
-    struct NODE *NIL;
-};
+    int v;
+    char color;
+} node;
 
-void BUILD_TREE(struct RBTREE *T)
+typedef struct
 {
-    T->NIL = (struct NODE *)malloc(sizeof(struct NODE));
-    T->NIL->color = 1;
-    T->NIL->left = NULL;
-    T->NIL->right = NULL;
-    T->NIL->p = NULL;
-    T->NIL->key = -1;
-    T->root = T->NIL;
+    node *root;
+    node *nil;
+} rbtree;
+
+void initial(rbtree *t)
+{
+
+    t->nil = (node *)malloc(sizeof(node));
+    t->nil->left = NULL;
+    t->nil->right = NULL;
+    t->nil->p = NULL;
+    t->nil->color = 'b';
+    t->nil->v = -1;
+    t->root = t->nil;
 }
-struct NDOE *TREE_MINIMUM(struct RBTREE *T, struct NODE *x)
+void insert(rbtree *t, node *x);
+void delete (rbtree *t, node *x);
+void insert_fixup(rbtree *t, node *x);
+void delete_fixup(rbtree *t, node *x);
+void transplant(rbtree *t, node *u, node *v);
+void left_rotate(rbtree *t, node *x);
+void right_rotate(rbtree *t, node *x);
+node *tree_minimun(rbtree *t, node *x);
+
+void left_rotate(rbtree *t, node *x)
 {
-    struct NODE *y = T->NIL;
-    while (x != T->NIL)
-    {
-        y = x;
-        x = x->left;
-    }
-    return y;
-}
-//左旋
-void LEFT_ROTATE(struct RBTREE *T, struct NODE *x)
-{
-    struct NODE *y = x->right;
-    //第一层关系x与z
-    //先把y的左边节点给x的右边节点
+    node *y = x->right;
     x->right = y->left;
-    //改变y左的父节点的指针
-    if (y->left != T->NIL)
+    if (y->left != t->nil)
     {
         y->left->p = x;
     }
-    //第二层关系y与x父节点
-    //把y放到x原本的位置
-    //y父为x父
     y->p = x->p;
-    //x父子为y
-    if (x->p == T->NIL)
+    if (x->p == t->nil)
     {
-        T->root = y;
-    }
-    else if (x == x->p->left)
-    {
-        x->p->left = y;
+        t->root = y;
     }
     else
     {
-        x->p->right = y;
+        if (x->p->left == x)
+        {
+            x->p->left = y;
+        }
+        else
+        {
+            x->p->right = y;
+        }
     }
-    //第三层关系y与x
-    //调整y的左子节点，和x的父节点
     y->left = x;
     x->p = y;
 }
-//右旋
-void RIGHT_ROTATE(struct RBTREE *T, struct NODE *y)
+void right_rotate(rbtree *t, node *x)
 {
-    struct NODE *x = y->left;
-    //第一层关系
-    //先把x的右节点给y的左节点
-    y->left = x->right;
-    if (x->right != T->NIL)
+    node *y = x->left;
+    y->p = x->p;
+    if (x->p == t->nil)
     {
-        x->right->p = y;
-    }
-    //第二层关系
-    //再把x放到y原本的位置
-    x->p = y->p;
-    if (y->p == T->NIL)
-    {
-        T->root = x;
-    }
-    else if (y == y->p->left)
-    {
-        y->p->left = x;
+        t->root = y;
     }
     else
     {
-        y->p->right = x;
-    }
-    //第三层关系
-    //再调整x的右子节点和y的父节点
-    x->right = y;
-    y->p = x;
-}
-void RB_INSERT_FIXUP(struct RBTREE *T, struct NODE *z)
-{
-    while (z->p->color == 0)
-    {
-        //如果这个节点在左边
-        if (z->p == z->p->p->left)
+        if (x->p->left == x)
         {
-            struct NODE *y = z->p->p->right;
-            //如果父节点的父节点的右孩子是红色的，那么进行以下操作（情况1）
-            if (y->color == 0)
-            {
-                //将父节点和父节点的父节点的有孩子变成黑色，父节点的父节点变成黑色
-                z->p->color = 1;
-                y->color = 1;
-                z->p->p->color = 0;
-                //将z指针指向父节点的父节点
-                z = z->p->p;
-            }
-            //如果父节点的父节点的右孩子是黑色的，那么判断z是其父节点的右孩子还是左孩子，若是右孩子
-            else
-            {
-                if (z == z->p->right)
-                {
-                    //进行左旋，(情况3)
-                    z = z->p;
-                    LEFT_ROTATE(T, z);
-                }
-                //如果是左孩子，先把z的父节点变成黑色，再把z的父节点的父节点变成红色，再进行右旋，情况3
-                z->p->color = 1;
-                z->p->p->color = 0;
-                RIGHT_ROTATE(T, z->p->p);
-            }
-        }
-        //如果这个节点在右边
-        else
-        {
-            struct NODE *y = z->p->p->left;
-            if (y->color == 0)
-            {
-                z->p->color = 1;
-                z->p->p->color = 0;
-                y->color = 1;
-                z = z->p->p;
-            }
-            else
-            {
-                if (z == z->p->left)
-                {
-                    z = z->p;
-                    RIGHT_ROTATE(T, z);
-                }
-
-                z->p->color = 1;
-                z->p->p->color = 0;
-                LEFT_ROTATE(T, z->p->p);
-            }
-        }
-    }
-    //调整最后的根节点颜色
-    T->root->color = 1;
-}
-
-void RB_INSERT(struct RBTREE *T, struct NODE *z)
-{
-    struct NODE *y = T->NIL;
-    struct NODE *x = T->root;
-    while (x != T->NIL)
-    {
-        //把传递给y
-        y = x;
-        //把x的关键值与z的关键字比较
-        if (x->key > z->key)
-        {
-            x = x->left;
+            x->p->left = y;
         }
         else
         {
-            x = x->right;
+            x->p->right = y;
         }
     }
-    //把y的指针传递给z的p属性
-    z->p = y;
-    //把z传递给y的左边或者右边
-    if (y == T->NIL)
+
+    x->left = y->right;
+    if (y->right != t->nil)
     {
-        T->root = z;
+        y->right->p = x;
     }
-    else if (y->key > z->key)
+
+    y->right = x;
+    x->p = y;
+}
+
+void insert(rbtree *t, node *x)
+{
+    node *y = t->root;
+    node *z = t->nil;
+    while (y != t->nil)
     {
-        y->left = z;
+        z = y;
+        if (y->v > x->v)
+        {
+            y = y->left;
+        }
+        else
+        {
+            y = y->right;
+        }
+    }
+    x->p = z;
+    if (z == t->nil)
+    {
+        t->root = x;
+    }
+    else if (z->v > x->v)
+    {
+        z->left = x;
     }
     else
     {
-        y->right = z;
+        z->right = x;
     }
-    z->left = T->NIL;
-    z->right = T->NIL;
-    z->color = 0; //0代表红色
-    RB_INSERT_FIXUP(T, z);
+    x->left = t->nil;
+    x->right = t->nil;
+    x->color = 'r';
+    insert_fixup(t, x);
 }
 
-void TREE_WALK(struct RBTREE *T, struct NODE *node)
+void insert_fixup(rbtree *t, node *x)
 {
+    while (x->p->color == 'r')
+    {
+        if (x->p == x->p->p->left)
+        {
+            node *y = x->p->p->right;
+            if (y->color == 'r')
+            {
+                x->p->p->color = 'r';
+                y->color = 'b';
+                x->p->color = 'b';
+                x = x->p->p;
+            }
+            else
+            {
+                if (x == x->p->right)
+                {
+                    x = x->p;
+                    left_rotate(t, x);
+                }
+                x->p->color = 'b';
+                x->p->p->color = 'r';
+                right_rotate(t, x->p->p);
+            }
+        }
+        else
+        {
+            node *y = x->p->p->left;
+            if (y->color == 'r')
+            {
+                y->color = 'b';
+                x->p->color = 'b';
+                x->p->p->color = 'r';
+                x = x->p->p;
+            }
+            else
+            {
+                if (x == x->p->left)
+                {
+                    x = x->p;
+                    right_rotate(t, x);
+                }
+                x->p->color = 'b';
+                x->p->p->color = 'r';
+                left_rotate(t, x->p->p);
+            }
+        }
+    }
+    t->root->color = 'b';
+}
 
-    if (node == T->NIL)
+void print(rbtree *t, node *x)
+{
+    if (x == t->nil)
     {
         return;
     }
-    if (node->color == 0 && (node->left == 0 || node->right == 0))
-    {
-        printf("error\n");
-    }
-    TREE_WALK(T, node->left);
-    printf("%d ", node->key);
-    TREE_WALK(T, node->right);
+    print(t, x->left);
+    printf("%d ", x->v);
+    print(t, x->right);
 }
-//用v子树代替u子树
-void RB_TRANSPLANT(struct RBTREE *T, struct NODE *u, struct NODE *v)
+void transplant(rbtree *t, node *u, node *v)
 {
-    //如果u是根节点，直接让根节点指向v
-    if (u->p == T->NIL)
+    if (u->p == t->nil)
     {
-        T->root = v;
+        t->root = v;
+        v->p = t->nil;
     }
     else
     {
-        //如果u是其父节点的左子节点，则将v赋值给他
+        v->p = u->p;
         if (u == u->p->left)
         {
             u->p->left = v;
         }
-        //否则
         else
         {
             u->p->right = v;
         }
     }
 }
-//删除节点后的修复
-void RB_DELETE_FIXUP(struct RBTREE *T, struct NODE *x)
+void node_delete(rbtree *t, node *x)
 {
-    //当x指向的不是根节点并且x的颜色为黑色
-    while (x != T->root && x->color == 1)
+    //x要删除的节点，y指向要删除的节点，z指向要删除的节点的右边子节点
+    node *y = x;
+    node *z = t->nil;
+    char y_orign_color = y->color;
+    if (x->left == t->nil)
     {
-        //如果x是x的父节点的左子节点
-        if (x == x->p->left)
-        {
-            //定义w指向x
-            struct NODE *w = x->p->left;
-            //若w的颜色为红色
-            if (w->color == 0)
-            {
-                //先将w的颜色变为黑色
-                w->color = 1;
-                //再将x的父节点的颜色变为红色，此时性质未改变
-                w->p->color = 0;
-                //进行左旋
-                LEFT_ROTATE(T, x->p);
-                //让w指向x的父节点的右边节点
-                w = x->p->right;
-            }
-            //如果w的左边节点的颜色为黑色并且w的右边节点的颜色也为黑色
-            if (w->left->color == 1 && w->right->color == 1)
-            {
-                //将w节点变成红色
-                w->color = 0;
-                //x指向他的父节点
-                x = x->p;
-            }
-            else
-            {
-                //情况3------------->将其转换为情况四
-                //如果w的右节点是黑色的
-                if (w->right->color == 1)
-                {
-                    //w的左边的颜色变为黑色
-                    w->left->color = 1;
-                    //w的颜色变为红色
-                    w->color = 0;
-                    //进行右旋（不改变节点的性质）
-                    RIGHT_ROTATE(T, w);
-                    //将w重新指向x的父节点的右子节点
-                    w = x->p->right;
-                }
-                //情况四
-                //w的颜色变为x的父节点的颜色
-                w->color = x->p->color;
-                //x的父节点的颜色变为黑色
-                x->p->color = 1;
-                //w的右节点的颜色变为黑色
-                w->right->color = 1;
-                //进行左旋
-                LEFT_ROTATE(T, x->p);
-                //x指向根节点
-                x = T->root;
-            }
-        }
-        else
-        {
-            struct NODE *w = x->p->right;
-            if (w->color == 0)
-            {
-                w->color = 1;
-                w->p->color = 0;
-                RIGHT_ROTATE(T, x->p);
-                w = x->p->left;
-            }
-            if (w->right->color == 1 && w->left->color == 1)
-            {
-                w->color = 0;
-                x = x->p;
-            }
-            else
-            {
-                if (w->left->color == 1)
-                {
-                    w->right->color = 1;
-                    w->color = 0;
-                    RIGHT_ROTATE(T, w);
-                    w = x->p->left;
-                }
-                w->color = x->p->color;
-                x->p->color = 1;
-                w->left->color = 1;
-                LEFT_ROTATE(T, x->p);
-                x = T->root;
-            }
-        }
+        z = x->right;
+        transplant(t, x, z);
     }
-    //将x指向的节点的颜色变为黑色
-    x->color = 1;
-}
-void RB_DELETE(struct RBTREE *T, struct NODE *z)
-{
-    //y指向需要被删除的节点或者用来代替这点删除点的节点
-    struct NODE *y = z;
-    //x记录可能会被破坏的分支
-    struct NODE *x;
-    //y原先指向的颜色
-    int y_original_color = y->color;
-    //若删除点的左子节点为空
-    if (z->left == T->NIL)
+    else if (x->right == t->nil)
     {
-        //记录x为z的右子树
-        x = z->right;
-        //用z的右子树直接替换z
-        RB_TRANSPLANT(T, z, z->right);
+        z = x->left;
+        transplant(t, x, z);
     }
-    //若z的右子树为空
-    else if (z->right == T->NIL)
-    {
-        //记录z的左子树
-        x = z->left;
-        //用z的左子树直接替换z
-        RB_TRANSPLANT(T, z, z->left);
-    }
-    //若z的子节点都不为空
     else
     {
-        //让y指向z的后继
-        y = TREE_MINIMUM(T, z->right);
-        //更新y的原先颜色为新的节点颜色
-        y_original_color = y->color;
-        //用x记录y的右子树
-        x = y->right;
-        //如果y的父节点就是z
-        if (y->p == z)
+        y = tree_minimun(t, x->right);
+        y_orign_color = y->color;
+        z = y->right;
+        if (y->p == x)
         {
-            //让x的父节点指向y（这里有疑问我不太懂有什么用，感觉毫无用处）
-            x->p = y;
+            z->p = y;
         }
-        //如果y的父节点不是z
         else
         {
-            //用y的右子树代替y
-            RB_TRANSPLANT(T, y, y->right);
-            //将y插入到z的位置上，并进行关联
-            y->right = z->right;
-            y->right->p = y;
+            transplant(t, y, y->right);
+            y->right = x->right;
+            x->right->p = y;
         }
-        //用y子树代替z子树
-        RB_TRANSPLANT(T, z, y);
-        //并将z原先的左子树关联到y上
-        y->left = z->left;
-        y->left->p = y;
-        //将z的颜色给y
-        y->color = z->color;
+        transplant(t, x, y);
+        y->left = x->left;
+        x->left->p = y;
+        y->color = x->color;
     }
-    //如果原先的y的颜色为黑色，则性质被破坏，调用修复函数修复函数的性质
-    if (y_original_color == 1)
+
+    if (y_orign_color == 'b')
     {
-        RB_DELETE_FIXUP(T, x);
+        delete_fixup(t, z);
     }
 }
-
-int main(int argc, char const *argv[])
+node *tree_minimun(rbtree *t, node *x)
 {
-    struct RBTREE T;
-    BUILD_TREE(&T);
-    srand((unsigned int)time(NULL));
+    node *y = t->nil;
+    while (x != t->nil)
+    {
+        y = x;
+        x = x->left;
+    }
+    return y;
+}
+void delete_fixup(rbtree *t, node *x)
+{
+    while (x != t->root && x->color == 'b')
+    {
+        if (x == x->p->left)
+        {
+            node *y = x->p->right;
+            if (y->color == 'r')
+            {
+                y->color = 'b';
+                x->p->color = 'r';
+                left_rotate(t, x->p);
+                y = x->p->right;
+            }
+            if (y->left->color == 'b' && y->right->color == 'b')
+            {
+                y->color = 'r';
+                x = x->p;
+            }
+            else
+            {
+                if (y->right->color == 'b')
+                {
+                    y->left->color = 'b';
+                    y->color = 'r';
+                    right_rotate(t, y);
+                    y = x->p->right;
+                }
+                y->color = x->p->color;
+                y->p->color = 'b';
+                y->right->color = 'b';
+                left_rotate(t, x->p);
+                x = t->root;
+            }
+        }
+        else
+        {
+            node *y = x->p->left;
+            if (y->color == 'r')
+            {
+                x->p->color = 'r';
+                y->color = 'b';
+                right_rotate(t, x->p);
+                y = x->p->left;
+            }
+            if (y->left->color == 'b' && y->right->color == 'b')
+            {
+                y->color = 'r';
+                x = x->p;
+            }
+            else
+            {
+                if (y->left->color = 'b')
+                {
+                    y->right->color = 'b';
+                    y->color = 'r';
+                    left_rotate(t, y);
+                    y = x->p->left;
+                }
+                y->color = x->p->color;
+                x->p->color = 'b';
+                y->left->color = 'b';
+                right_rotate(t, x->p);
+            }
+        }
+    }
+    x->color = 'b';
+}
+int main()
+{
+    rbtree t;
+    initial(&t);
+    /*     srand((unsigned int)time(NULL));
     for (int i = 0; i < 10; i++)
     {
-        struct NODE *n = (struct NODE *)malloc(sizeof(struct NODE));
-        n->color = 0;
-        n->key = rand() % 100 + 1;
-        n->left = T.NIL;
-        n->right = T.NIL;
-        n->p = T.NIL;
-        RB_INSERT(&T, n);
+        node *n = (node *)malloc(sizeof(node));
+        n->color = 'r';
+        n->v = rand() % 100 + 1;
+        n->left = t.nil;
+        n->right = t.nil;
+        n->p = t.nil;
+        insert(&t, n);
     }
 
-    struct NODE *n = (struct NODE *)malloc(sizeof(struct NODE));
-    n->color = 0;
-    n->key = 72;
-    n->left = T.NIL;
-    n->right = T.NIL;
-    n->p = T.NIL;
-    RB_INSERT(&T, n);
-    TREE_WALK(&T, T.root);
+    print(&t, t.root);
     printf("\n");
-    RB_DELETE(&T, n);
-    TREE_WALK(&T, T.root);
+    node *n = (node *)malloc(sizeof(node));
+    n->color = 'r';
+    n->v = rand() % 100 + 1;
+    n->left = t.nil;
+    n->right = t.nil;
+    n->p = t.nil;
+    insert(&t, n);
+    print(&t, t.root);
+    printf("\n");
+    node_delete(&t, n);
+    print(&t, t.root);
+    printf("\n"); */
+
+    int num[] = {41, 38, 31, 12, 19, 8};
+    int ad[] = {5, 3, 4, 2, 1, 0};
+    node *n[6];
+    for (int i = 0; i < 6; i++)
+    {
+        n[i] = (node *)malloc(sizeof(node));
+        n[i]->color = 'r';
+        n[i]->v = num[i];
+        n[i]->left = t.nil;
+        n[i]->right = t.nil;
+        n[i]->p = t.nil;
+        insert(&t, n[i]);
+    }
+    print(&t, t.root);
+    printf("\n");
+
+    for (int i = 0; i < 6; i++)
+    {
+        node_delete(&t, n[ad[i]]);
+        print(&t, t.root);
+        printf("\n");
+    }
     return 0;
 }

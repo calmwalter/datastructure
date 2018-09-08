@@ -67,7 +67,7 @@ int Queue::q_pop()
 	catch(int)
 	{
 		cout<<"Error! The queue is empty."<<endl;
-	}	
+	}
 }
 int main(){
 	Queue qqq;
